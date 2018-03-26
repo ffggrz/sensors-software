@@ -19,7 +19,7 @@
 #define SEND2INFLUX 0
 #define SEND2LORA 0
 #define SEND2CSV 0
-#define SEND2CUSTOM 0
+#define SEND2CUSTOM 1
 
 // NTP Server
 #define NTP_SERVER "0.europe.pool.ntp.org"
@@ -31,8 +31,8 @@
 // IMPORTANT: NO MORE CHANGES TO VARIABLE NAMES NEEDED FOR EXTERNAL APIS
 
 // Definition eigene API
-#define HOST_CUSTOM "192.168.234.1"
-#define URL_CUSTOM "/data.php"
+#define HOST_CUSTOM "sensoren.ffggrz.de"
+#define URL_CUSTOM "/luftdaten.info.php"
 #define PORT_CUSTOM 80
 #define USER_CUSTOM ""
 #define PWD_CUSTOM ""
@@ -113,7 +113,7 @@
 #endif
 
 // BME280, Luftdruck-Sensor
-#define BME280_READ 0
+#define BME280_READ 1
 #define BME280_API_PIN 11
 #if defined(ESP8266)
 #define BME280_PIN_SCL D4
