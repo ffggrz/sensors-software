@@ -55,6 +55,7 @@
 /* Extensions connected via I2C:                                 *
 /* HTU21D (https://www.sparkfun.com/products/13763),             *
 /* BMP180, BMP280, BME280, OLED Display with SSD1306 (128x64 px) *
+/* TSL2561                                                       *
 /*                                                               *
 /* Wiring Instruction                                            *
 /* (see labels on display or sensor board)                       *
@@ -69,7 +70,7 @@
 /*                                                               *
 /*****************************************************************/
 // increment on change
-#define SOFTWARE_VERSION "NRZ-2017-100"
+#define SOFTWARE_VERSION "NRZ-2018-001"
 
 /*****************************************************************
 /* Includes                                                      *
@@ -99,6 +100,7 @@
 #include <Adafruit_BMP085.h>
 #include <Adafruit_BMP280.h>
 #include <Adafruit_BME280.h>
+#include <SparkFunTSL2561.h>
 #include <DallasTemperature.h>
 #include <TinyGPS++.h>
 #include <Ticker.h>
@@ -149,6 +151,8 @@ bool bmp280_read = 0;
 bool bmp280_init_failed = 0;
 bool bme280_read = 0;
 bool bme280_init_failed = 0;
+bool tsl2561_read = 0;
+bool tsl2561_init_failed = 0;
 bool ds18b20_read = 0;
 bool gps_read = 0;
 bool send2dusti = 1;
@@ -254,6 +258,11 @@ Adafruit_BMP280 bmp280;
 Adafruit_BME280 bme280;
 
 /*****************************************************************
+/* TSL2561 declaration                                            *
+/*****************************************************************/
+SFE_TSL2561 tsl2561;
+
+/*****************************************************************
 /* DS18B20 declaration                                            *
 /*****************************************************************/
 OneWire oneWire(DS18B20_PIN);
@@ -354,6 +363,7 @@ String last_value_BMP280_P = "";
 String last_value_BME280_T = "";
 String last_value_BME280_H = "";
 String last_value_BME280_P = "";
+String last_value_TSL2561_LUX = "";
 String last_value_DS18B20_T = "";
 String last_data_string = "";
 
@@ -488,6 +498,20 @@ char *dtostrf(double val, int width, unsigned int prec, char *sout) {
 /* precision of two decimal places                               *
 /*****************************************************************/
 String Float2String(const float value) {
+	// Convert a float to String with two decimals.
+	char temp[15];
+	String s;
+
+	dtostrf(value, 13, 2, temp);
+	s = String(temp);
+	s.trim();
+	return s;
+}
+/*****************************************************************
+/* convert float to string with a                                *
+/* precision of two decimal places                               *
+/*****************************************************************/
+String Double2String(const double value) {
 	// Convert a float to String with two decimals.
 	char temp[15];
 	String s;
@@ -651,6 +675,7 @@ void copyExtDef() {
 	setDef(bmp_read, BMP_READ);
 	setDef(bmp280_read, BMP280_READ);
 	setDef(bme280_read, BME280_READ);
+	setDef(tsl2561_read, TSL2561_READ);
 	setDef(ds18b20_read, DS18B20_READ);
 	setDef(gps_read, GPS_READ);
 	setDef(send2dusti, SEND2DUSTI);
@@ -734,6 +759,7 @@ void readConfig() {
 					setFromJSON(bmp_read);
 					setFromJSON(bmp280_read);
 					setFromJSON(bme280_read);
+					setFromJSON(tsl2561_read);
 					setFromJSON(ds18b20_read);
 					setFromJSON(gps_read);
 					setFromJSON(send2dusti);
@@ -804,6 +830,7 @@ void writeConfig() {
 	copyToJSON_Bool(bmp_read);
 	copyToJSON_Bool(bmp280_read);
 	copyToJSON_Bool(bme280_read);
+	copyToJSON_Bool(tsl2561_read);
 	copyToJSON_Bool(ds18b20_read);
 	copyToJSON_Bool(gps_read);
 	copyToJSON_Bool(send2dusti);
@@ -1114,6 +1141,7 @@ void webserver_config() {
 		page_content += form_checkbox("bmp_read", FPSTR(INTL_BMP180), bmp_read);
 		page_content += form_checkbox("bmp280_read", FPSTR(INTL_BMP280), bmp280_read);
 		page_content += form_checkbox("bme280_read", FPSTR(INTL_BME280), bme280_read);
+		page_content += form_checkbox("tsl2561_read", FPSTR(INTL_TSL2561), tsl2561_read);
 		page_content += form_checkbox("ds18b20_read", FPSTR(INTL_DS18B20), ds18b20_read);
 		page_content += form_checkbox("gps_read", FPSTR(INTL_NEO6M), gps_read);
 		page_content += F("<br/><b>"); page_content += FPSTR(INTL_WEITERE_EINSTELLUNGEN); page_content += F("</b><br/>");
@@ -1180,6 +1208,7 @@ void webserver_config() {
 		readBoolParam(bmp_read);
 		readBoolParam(bmp280_read);
 		readBoolParam(bme280_read);
+		readBoolParam(tsl2561_read);
 		readBoolParam(ds18b20_read);
 		readBoolParam(gps_read);
 		readBoolParam(auto_update);
@@ -1223,6 +1252,7 @@ void webserver_config() {
 		page_content += line_from_value(tmpl(FPSTR(INTL_LESE), "BMP180"), String(bmp_read));
 		page_content += line_from_value(tmpl(FPSTR(INTL_LESE), "BMP280"), String(bmp280_read));
 		page_content += line_from_value(tmpl(FPSTR(INTL_LESE), "BME280"), String(bme280_read));
+		page_content += line_from_value(tmpl(FPSTR(INTL_LESE), "TSL2561"), String(tsl2561_read));
 		page_content += line_from_value(tmpl(FPSTR(INTL_LESE), "DS18B20"), String(ds18b20_read));
 		page_content += line_from_value(tmpl(FPSTR(INTL_LESE), "GPS"), String(gps_read));
 		page_content += line_from_value(FPSTR(INTL_AUTO_UPDATE), String(auto_update));
@@ -1374,6 +1404,10 @@ void webserver_values() {
 			page_content += table_row_from_value("BME280", FPSTR(INTL_TEMPERATUR), last_value_BME280_T, "°C");
 			page_content += table_row_from_value("BME280", FPSTR(INTL_LUFTFEUCHTE), last_value_BME280_H, "%");
 			page_content += table_row_from_value("BME280", FPSTR(INTL_LUFTDRUCK),  Float2String(last_value_BME280_P.toFloat() / 100.0), "hPa");
+		}
+		if (tsl2561_read) {
+			page_content += empty_row;
+			page_content += table_row_from_value("TSL2561", FPSTR(INTL_LUX), last_value_TSL2561_LUX, "LUX");
 		}
 		if (ds18b20_read) {
 			page_content += empty_row;
@@ -1619,6 +1653,7 @@ void wifiConfig() {
 	debug_out(F("PPD_read: "), DEBUG_MIN_INFO, 0); debug_out(String(ppd_read), DEBUG_MIN_INFO, 1);
 	debug_out(F("SDS_read: "), DEBUG_MIN_INFO, 0); debug_out(String(sds_read), DEBUG_MIN_INFO, 1);
 	debug_out(F("BMP_read: "), DEBUG_MIN_INFO, 0); debug_out(String(bmp_read), DEBUG_MIN_INFO, 1);
+	debug_out(F("TSL2561_read: "), DEBUG_MIN_INFO, 0); debug_out(String(tsl2561_read), DEBUG_MIN_INFO, 1);
 	debug_out(F("DS18B20_read: "), DEBUG_MIN_INFO, 0); debug_out(String(ds18b20_read), DEBUG_MIN_INFO, 1);
 	debug_out(F("Dusti: "), DEBUG_MIN_INFO, 0); debug_out(String(send2dusti), DEBUG_MIN_INFO, 1);
 	debug_out(F("Madavi: "), DEBUG_MIN_INFO, 0); debug_out(String(send2madavi), DEBUG_MIN_INFO, 1);
@@ -2110,6 +2145,60 @@ String sensorBME280() {
 	debug_out(F("------"), DEBUG_MIN_INFO, 1);
 
 	debug_out(F("End reading BME280"), DEBUG_MED_INFO, 1);
+
+	return s;
+}
+
+/*****************************************************************
+/* read TSL2561 sensor values                                    *
+/*****************************************************************/
+String sensorTSL2561() {
+	String s = "";
+	double l;
+	unsigned int data0, data1;
+
+	debug_out(F("Start reading TSL2561"), DEBUG_MED_INFO, 1);
+
+	// There are two light sensors on the device, one for visible light
+	// and one for infrared. Both sensors are needed for lux calculations.
+
+	// Retrieve the data from the device
+
+	if (tsl2561.getData(data0, data1)) {
+		// getData() returned true, communication was successful
+		debug_out(F("Light v : "), DEBUG_MIN_INFO, 0);
+		debug_out(Float2String(data0) + " ", DEBUG_MIN_INFO, 1);
+		debug_out(F("Light i: "), DEBUG_MIN_INFO, 0);
+		debug_out(Float2String(data1) + " ", DEBUG_MIN_INFO, 1);
+		if (tsl2561.getLux(0, 1000, data0, data1, l)) {
+			debug_out(F("Light : "), DEBUG_MIN_INFO, 0);
+			debug_out(Float2String(l) + " LUX", DEBUG_MIN_INFO, 1);
+			last_value_TSL2561_LUX = Double2String(l);
+
+			s += Value2Json(F("TSL2561_LUX"), last_value_TSL2561_LUX);
+			last_value_TSL2561_LUX.remove(last_value_TSL2561_LUX.length() - 1);
+		} else
+		{
+			// To calculate lux, pass all your settings and readings
+			// to the getLux() function.
+
+			// The getLux() function will return 1 if the calculation
+			// was successful, or 0 if one or both of the sensors was
+			// saturated (too much light). If this happens, you can
+			// reduce the integration time and/or gain.
+			// For more information see the hookup guide at: https://learn.sparkfun.com/tutorials/getting-started-with-the-tsl2561-luminosity-sensor
+
+			debug_out(F("TSL2561 too much light"), DEBUG_ERROR, 1);
+		}
+	}
+	else
+	{
+		debug_out(F("TSL2561 couldn't be read"), DEBUG_ERROR, 1);
+	}
+
+
+	debug_out(F("------"), DEBUG_MIN_INFO, 1);
+	debug_out(F("End reading TSL2561"), DEBUG_MED_INFO, 1);
 
 	return s;
 }
@@ -2742,6 +2831,37 @@ bool initBME280(char addr) {
 }
 
 /*****************************************************************
+/* Init TSL2561                                                  *
+/*****************************************************************/
+bool initTSL2561(char addr) {
+	unsigned char ID;
+	boolean gain;     // Gain setting, 0 = X1, 1 = X16;
+	unsigned int ms;  // Integration ("shutter") time in milliseconds
+	gain = 0;
+	unsigned char time = 2;
+
+	debug_out(F("Trying TSL2561 sensor on "), DEBUG_MIN_INFO, 0);
+	debug_out(String(addr, HEX), DEBUG_MIN_INFO, 0);
+
+	if (tsl2561.begin(addr)) {
+		debug_out(F(" ... found"), DEBUG_MIN_INFO, 1);
+		debug_out(F("TSL2561 ID: "), DEBUG_MIN_INFO, 0);
+		if (tsl2561.getID(ID)) {
+			debug_out(String(ID, HEX), DEBUG_MIN_INFO, 1);
+			tsl2561.setTiming(gain, time, ms);
+			tsl2561.setPowerUp();
+		} else {
+			debug_out(F("FAIL"), DEBUG_MIN_INFO, 1);
+		}
+		return true;
+	} else {
+		debug_out(F(" ... not found"), DEBUG_MIN_INFO, 1);
+		return false;
+	}
+}
+
+
+/*****************************************************************
 /* The Setup                                                     *
 /*****************************************************************/
 void setup() {
@@ -2805,6 +2925,7 @@ void setup() {
 	if (bmp_read) { debug_out(F("Lese BMP..."), DEBUG_MIN_INFO, 1); }
 	if (bmp280_read) { debug_out(F("Lese BMP280..."), DEBUG_MIN_INFO, 1); }
 	if (bme280_read) { debug_out(F("Lese BME280..."), DEBUG_MIN_INFO, 1); }
+	if (tsl2561_read) { debug_out(F("Lese tsl2561..."), DEBUG_MIN_INFO, 1); }
 	if (ds18b20_read) { debug_out(F("Lese DS18B20..."), DEBUG_MIN_INFO, 1); }
 	if (gps_read) { debug_out(F("Lese GPS..."), DEBUG_MIN_INFO, 1); }
 	if (send2dusti) { debug_out(F("Sende an luftdaten.info..."), DEBUG_MIN_INFO, 1); }
@@ -2829,6 +2950,10 @@ void setup() {
 	if (bme280_read && !initBME280(0x76) && !initBME280(0x77)) {
 		debug_out(F("Check BME280 wiring"), DEBUG_MIN_INFO, 1);
 		bme280_init_failed = 1;
+	}
+	if (tsl2561_read && !initTSL2561(0x49) ) { //&& !initTSL2561(0x29)  && !initTSL2561(0x49)) { //test
+		debug_out(F("Check TSL2561 wiring"), DEBUG_MIN_INFO, 1);
+		tsl2561_init_failed = 1;
 	}
 	if (sds_read) {
 		debug_out(F("Stoppe SDS011..."), DEBUG_MIN_INFO, 1);
@@ -2877,6 +3002,7 @@ void loop() {
 	String result_BMP = "";
 	String result_BMP280 = "";
 	String result_BME280 = "";
+	String result_TSL2561 = "";
 	String result_DS18B20 = "";
 	String result_GPS = "";
 	String signal_strength = "";
@@ -2955,6 +3081,10 @@ void loop() {
 		if (bme280_read && (! bme280_init_failed)) {
 			debug_out(F("Call sensorBME280"), DEBUG_MAX_INFO, 1);
 			result_BME280 = sensorBME280();			// getting temperature, humidity and pressure (optional)
+		}
+		if (tsl2561_read && (! tsl2561_init_failed)) {
+			debug_out(F("Call sensorTSL2561"), DEBUG_MAX_INFO, 1);
+			result_TSL2561 = sensorTSL2561();     // getting LUX (optional)
 		}
 
 		if (ds18b20_read) {
@@ -3062,6 +3192,15 @@ void loop() {
 			}
 		}
 
+		if (tsl2561_read && (! tsl2561_init_failed)) {
+			data += result_TSL2561;
+			if (send2dusti) {
+				debug_out(F("## Sending to luftdaten.info (TSL2561): "), DEBUG_MIN_INFO, 1);
+				start_send = micros();
+				sendLuftdaten(result_TSL2561, TSL2561_API_PIN, host_dusti, httpPort_dusti, url_dusti, "TSL2561_");
+				sum_send_time += micros() - start_send;
+			}
+		}
 		if (ds18b20_read) {
 			data += result_DS18B20;
 			if (send2dusti) {

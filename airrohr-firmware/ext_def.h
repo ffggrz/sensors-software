@@ -3,7 +3,7 @@
 #define CURRENT_LANG INTL_LANG
 
 // WLAN Konfig
-#define WLANSSID "Freifunk-disabled"
+#define WLANSSID "Freifunk"
 #define WLANPWD ""
 
 // BasicAuth Konfig
@@ -12,8 +12,8 @@
 #define WWW_BASICAUTH_ENABLED 0
 
 // Wohin gehen die Daten?
-#define SEND2DUSTI 1
-#define SEND2MADAVI 1
+#define SEND2DUSTI 0
+#define SEND2MADAVI 0
 #define SEND2SENSEMAP 0
 #define SEND2MQTT 0
 #define SEND2INFLUX 0
@@ -31,8 +31,8 @@
 // IMPORTANT: NO MORE CHANGES TO VARIABLE NAMES NEEDED FOR EXTERNAL APIS
 
 // Definition eigene API
-#define HOST_CUSTOM "sensoren.ffggrz.de"
-#define URL_CUSTOM "/luftdaten.info.php"
+#define HOST_CUSTOM "sensoren.ffggrz"
+#define URL_CUSTOM "/data.php"
 #define PORT_CUSTOM 80
 #define USER_CUSTOM ""
 #define PWD_CUSTOM ""
@@ -45,7 +45,7 @@
 #define PWD_INFLUX "info"
 
 // DHT22, Sensor Temperatur und Luftfeuchte
-#define DHT_READ 1
+#define DHT_READ 0
 #define DHT_TYPE DHT22
 #define DHT_API_PIN 7
 #if defined(ESP8266)
@@ -72,7 +72,7 @@
 #endif
 
 // SDS011, der etwas teuerere Feinstaubsensor
-#define SDS_READ 1
+#define SDS_READ 0
 #define SDS_API_PIN 1
 #if defined(ESP8266)
 // Serial confusion: These definitions are based on SoftSerial
@@ -120,6 +120,14 @@
 #define BME280_PIN_SDA D3
 #endif
 
+// TSL2561, Licht-Sensor
+#define TSL2561_READ 1
+#define TSL2561_API_PIN 12
+#if defined(ESP8266)
+#define TSL2561_PIN_SCL D4
+#define TSL2561_PIN_SDA D3
+#endif
+
 // DS18B20, Temperatur-Sensor
 #define DS18B20_READ 0
 #define DS18B20_API_PIN 13
@@ -137,7 +145,7 @@
 #endif
 
 // Automatische Firmware-Updates über WLAN
-#define AUTO_UPDATE 1
+#define AUTO_UPDATE 0
 
 // OLED Display SSD1306 angeschlossen?
 #define HAS_DISPLAY 0
