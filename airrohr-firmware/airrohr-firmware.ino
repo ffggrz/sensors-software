@@ -2177,8 +2177,7 @@ String sensorTSL2561() {
 
 			s += Value2Json(F("TSL2561_LUX"), last_value_TSL2561_LUX);
 			last_value_TSL2561_LUX.remove(last_value_TSL2561_LUX.length() - 1);
-		} else
-		{
+		} else {
 			// To calculate lux, pass all your settings and readings
 			// to the getLux() function.
 
@@ -2190,9 +2189,7 @@ String sensorTSL2561() {
 
 			debug_out(F("TSL2561 too much light"), DEBUG_ERROR, 1);
 		}
-	}
-	else
-	{
+	} else {
 		debug_out(F("TSL2561 couldn't be read"), DEBUG_ERROR, 1);
 	}
 

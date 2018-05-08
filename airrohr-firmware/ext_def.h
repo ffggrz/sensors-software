@@ -31,8 +31,8 @@
 // IMPORTANT: NO MORE CHANGES TO VARIABLE NAMES NEEDED FOR EXTERNAL APIS
 
 // Definition eigene API
-#define HOST_CUSTOM "sensoren.ffggrz"
-#define URL_CUSTOM "/data.php"
+#define HOST_CUSTOM "sensoren.ffggrz.de"
+#define URL_CUSTOM "/luftdaten.info.php"
 #define PORT_CUSTOM 80
 #define USER_CUSTOM ""
 #define PWD_CUSTOM ""
